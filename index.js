@@ -245,9 +245,12 @@ async function loadLogBounds(_addr) {
     redis.get(earlyKey),
     redis.get(lateKey),
   ])
-  if (!results[0] || !results[1]) return [0, 0]
-  logBoundsByAddress[normalizeHash(addr)] = results
-  return results
+  if (!results[0] || !results[1]) {
+    logBoundsByAddress[addr] = [0, 0]
+  } else {
+    logBoundsByAddress[addr] = results
+  }
+  return logBoundsByAddress[addr]
 }
 
 function normalizeNumber(num) {
