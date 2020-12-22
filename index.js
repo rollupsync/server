@@ -41,6 +41,8 @@ const legalAddresses = [
   '0xf226e579003311c0f7fa40e4460a76f5f08fdf82',
 ].reduce(objectify, {})
 
+const logBoundsByAddress = {}
+
 function verifyParams(method, params = []) {
   if (!Array.isArray(params)) {
     throw new Error('Invalid params argument')
@@ -105,13 +107,15 @@ app.post('/', async (req, res) => {
   // data.pipe(res)
   const cachedResult = await loadCache(method, params)
   if (cachedResult) {
-    console.log('cache hit')
+    console.log(`[${+new Date()}] ${method} cache hit`)
     res.json({
       id,
       jsonrpc,
-      result: JSON.parse(cachedResult),
+      result: typeof cachedResult === 'string' ? JSON.parse(cachedResult) : cachedResult,
     })
     return
+  } else {
+    console.log(`[${+new Date()}] ${method} cache miss`)
   }
   const { data } = await axios.post(gethUrl, req.body)
   if (method === 'eth_getLogs') {
@@ -133,6 +137,46 @@ async function loadCache(method, params = []) {
       } else {
         return await redis.get(`block_${normalizeNumber(params[0])}`)
       }
+      break
+    case 'eth_getLogs':
+      const { address, fromBlock, toBlock, topics } = params[0]
+      if (!fromBlock || !toBlock) return
+      const start = +fromBlock
+      const end = +toBlock
+      const addresses = [address].flat()
+      const promises = []
+      for (const addr of addresses) {
+        promises.push(loadLogBounds(addr))
+      }
+      const ranges = await Promise.all(promises)
+      for (const [ earliest, latest ] of ranges) {
+        if (!earliest || +earliest > start) return
+        if (!latest || +latest < end) return
+      }
+      const _promises = []
+      for (const addr of addresses) {
+        const key = `log_${normalizeHash(addr)}`
+        _promises.push(
+          redis.zrange(key, start, end)
+        )
+      }
+      const results = await Promise.all(_promises)
+      const final = []
+      for (const range of results) {
+        for (const item of range) {
+          const parsed = JSON.parse(r)
+          // filter by topic here
+          if (topics.length) {
+            let include = false
+            for (const t of topics) {
+              if (parsed.topics.indexOf(t) !== -1) include = true
+            }
+            if (!include) continue
+          }
+          final.push(JSON.parse(r))
+        }
+      }
+      return final
     default:
       break
   }
@@ -152,9 +196,58 @@ async function cache(method, params = [], result) {
         await redis.set(`block_${normalizeNumber(params[0])}`, resultString)
       }
       break
+    case 'eth_getLogs':
+      const { address, fromBlock, toBlock, topics } = params[0]
+      if (!fromBlock || !toBlock) return
+      const start = +fromBlock
+      const end = +toBlock
+      const addresses = [address].flat()
+
+      const promises = []
+      for (const logOutput of result) {
+        const key = `log_${normalizeHash(logOutput.address)}`
+        promises.push(redis.zadd(key, +logOutput.blockNumber, JSON.stringify(logOutput)))
+      }
+      await Promise.all(promises)
+
+      for (const addr of addresses) {
+        // update earliest and latest block
+        const [ earliest, latest ] = await loadLogBounds(addr)
+        const earlyKey = `logs_${normalizeHash(addr)}_earliest`
+        const lateKey = `logs_${normalizeHash(addr)}_latest`
+        const promises = []
+        if (!earliest || start < +earliest) {
+          // update
+          promises.push(redis.set(earlyKey, normalizeNumber(start)))
+          logBoundsByAddress[normalizeHash(addr)][0] = start
+        }
+        if (!latest || end > +latest) {
+          // update
+          promises.push(redis.set(lateKey, normalizeNumber(end)))
+          logBoundsByAddress[normalizeHash(addr)][1] = end
+        }
+        await Promise.all(promises)
+      }
+      break
     default:
       break
   }
+}
+
+async function loadLogBounds(_addr) {
+  const addr = normalizeHash(_addr)
+  if (logBoundsByAddress[addr]) {
+    return logBoundsByAddress[addr]
+  }
+  const earlyKey = `logs_${addr}_earliest`
+  const lateKey = `logs_${addr}_latest`
+  const results = await Promise.all([
+    redis.get(earlyKey),
+    redis.get(lateKey),
+  ])
+  if (!results[0] || !results[1]) return [0, 0]
+  logBoundsByAddress[normalizeHash(addr)] = results
+  return results
 }
 
 function normalizeNumber(num) {
