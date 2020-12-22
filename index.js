@@ -3,12 +3,31 @@ const express = require('express')
 const fs = require('fs')
 const path = require('path')
 const Redis = require('ioredis')
+const Web3 = require('web3')
 
 const redis = new Redis({
   host: 'redis',
   port: 6379,
   db: 0,
 })
+
+const GETH_WS_URL = 'wss://kovan.infura.io/ws/v3/6d3a403359fb4784b12a4cf6ed9f8ddd'
+const GETH_URL = 'https://kovan.infura.io/v3/6d3a403359fb4784b12a4cf6ed9f8ddd'
+const web3 = new Web3(GETH_WS_URL)
+
+let latestBlock, chainId
+web3.eth.subscribe('newBlockHeaders', async (err, { number }) => {
+  if (err) return
+  if (!number) return
+  latestBlock = (await axios.post(GETH_URL, {
+    method: 'eth_getBlockByNumber',
+    params: [normalizeNumber(number), false],
+    jsonrpc: '2.0',
+    id: 9999,
+  })).data.result
+})
+
+web3.eth.getChainId().then((id) => console.log(id) || (chainId = normalizeNumber(id)))
 
 const app = express()
 app.use(express.json())
@@ -96,7 +115,6 @@ app.post('/', async (req, res) => {
     res.status(401).json({ message: err.toString() })
     return
   }
-  const gethUrl = 'https://kovan.infura.io/v3/6d3a403359fb4784b12a4cf6ed9f8ddd'
 
   // const { data } = await axios({
   //   method: 'post',
@@ -111,13 +129,16 @@ app.post('/', async (req, res) => {
     res.json({
       id,
       jsonrpc,
-      result: typeof cachedResult === 'string' ? JSON.parse(cachedResult) : cachedResult,
+      result: typeof cachedResult === 'string' ? tryJSONParse(cachedResult) : cachedResult,
     })
     return
   } else {
+    if (method === 'eth_getBlockByNumber') {
+      console.log(method, params)
+    }
     console.log(`[${+new Date()}] ${method} cache miss`)
   }
-  const { data } = await axios.post(gethUrl, req.body)
+  const { data } = await axios.post(GETH_URL, req.body)
   if (method === 'eth_getLogs') {
     console.log(method, params)
     console.log(data)
@@ -126,11 +147,24 @@ app.post('/', async (req, res) => {
   await cache(method, params, data.result)
 })
 
+function tryJSONParse(data) {
+  try {
+    return JSON.parse(data)
+  } catch (e) {
+    return data
+  }
+}
+
 async function loadCache(method, params = []) {
   switch (method) {
+    case 'eth_chainId':
+      return chainId
     case 'eth_getTransactionByHash':
       return await redis.get(`tx_${normalizeHash(params[0])}`)
     case 'eth_getBlockByNumber':
+      if (params[0] === 'latest' && params[1] === false && latestBlock) {
+        return latestBlock
+      }
       if (isNaN(params[0])) return
       if (params[1]) {
         return await redis.get(`block_${normalizeNumber(params[0])}_full`)
