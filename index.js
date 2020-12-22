@@ -19,13 +19,13 @@ let latestBlock, chainId
 web3.eth.subscribe('newBlockHeaders', async (err, { number }) => {
   if (err) return
   if (!number) return
-  latestBlock = (await axios.get(GETH_URL, {
+  latestBlock = (await axios.post(GETH_URL, {
     method: 'eth_getBlockByNumber',
     params: [normalizeNumber(number), false],
   })).result
 })
 
-web3.eth.getChainId().then((id) => chainId = id)
+web3.eth.getChainId().then((id) => console.log(id) || chainId = normalizeNumber(id))
 
 const app = express()
 app.use(express.json())
