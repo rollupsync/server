@@ -129,7 +129,7 @@ app.post('/', async (req, res) => {
     res.json({
       id,
       jsonrpc,
-      result: typeof cachedResult === 'string' ? JSON.parse(cachedResult) : cachedResult,
+      result: typeof cachedResult === 'string' ? tryJSONParse(cachedResult) : cachedResult,
     })
     return
   } else {
@@ -146,6 +146,14 @@ app.post('/', async (req, res) => {
   res.json(data)
   await cache(method, params, data.result)
 })
+
+function tryJSONParse(data) {
+  try {
+    return JSON.parse(data)
+  } catch (e) {
+    return data
+  }
+}
 
 async function loadCache(method, params = []) {
   switch (method) {
