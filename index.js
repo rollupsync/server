@@ -169,7 +169,7 @@ async function loadCache(method, params = []) {
           if (topics.length) {
             let include = false
             for (const t of topics) {
-              if (parsed.topics.map(t => t.toLowerCase()).indexOf(t.toLowerCase()) !== -1) include = true
+              if (parsed.topics.map(t => t.replace('0x', '').toLowerCase()).indexOf(t.toLowerCase().replace('0x', '')) !== -1) include = true
             }
             if (!include) continue
           }
