@@ -115,6 +115,9 @@ app.post('/', async (req, res) => {
     })
     return
   } else {
+    if (method === 'eth_getBlockByNumber') {
+      console.log(method, params)
+    }
     console.log(`[${+new Date()}] ${method} cache miss`)
   }
   const { data } = await axios.post(gethUrl, req.body)
