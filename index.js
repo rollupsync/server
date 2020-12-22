@@ -22,6 +22,8 @@ web3.eth.subscribe('newBlockHeaders', async (err, { number }) => {
   latestBlock = (await axios.post(GETH_URL, {
     method: 'eth_getBlockByNumber',
     params: [normalizeNumber(number), false],
+    jsonrpc: '2.0',
+    id: 9999,
   })).result
 })
 
