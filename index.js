@@ -25,7 +25,7 @@ web3.eth.subscribe('newBlockHeaders', async (err, { number }) => {
   })).result
 })
 
-web3.eth.getChainId().then((id) => console.log(id) || chainId = normalizeNumber(id))
+web3.eth.getChainId().then((id) => console.log(id) || (chainId = normalizeNumber(id)))
 
 const app = express()
 app.use(express.json())
