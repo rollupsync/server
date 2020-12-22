@@ -15,14 +15,16 @@ const GETH_WS_URL = 'wss://mainnet.infura.io/ws/v3/6d3a403359fb4784b12a4cf6ed9f8
 const GETH_URL = 'https://kovan.infura.io/v3/6d3a403359fb4784b12a4cf6ed9f8ddd'
 const web3 = new Web3(GETH_WS_URL)
 
-let latestBlock
+let latestBlock, chainId
 web3.eth.subscribe('newBlockHeaders', ({ number }) => {
   if (!number) return
-  latestBlock = await axios.get(GETH_URL, {
+  latestBlock = (await axios.get(GETH_URL, {
     method: 'eth_getBlockByNumber',
     params: [normalizeNumber(number), false],
-  })
+  })).result
 })
+
+web3.eth.getChainId().then((id) => chainId = id)
 
 const app = express()
 app.use(express.json())
@@ -144,6 +146,8 @@ app.post('/', async (req, res) => {
 
 async function loadCache(method, params = []) {
   switch (method) {
+    case 'eth_chainId':
+      return chainId
     case 'eth_getTransactionByHash':
       return await redis.get(`tx_${normalizeHash(params[0])}`)
     case 'eth_getBlockByNumber':
