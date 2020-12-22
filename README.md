@@ -1,6 +1,8 @@
 # rollup-sync
 
-An intermediary server to improve rollup sync performance.
+An cache system to improve rollup sync performance.
+
+`rollup client` <--> `redis` <--> `geth`
 
 ### Testing
 
