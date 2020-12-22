@@ -16,7 +16,8 @@ const GETH_URL = 'https://kovan.infura.io/v3/6d3a403359fb4784b12a4cf6ed9f8ddd'
 const web3 = new Web3(GETH_WS_URL)
 
 let latestBlock, chainId
-web3.eth.subscribe('newBlockHeaders', async ({ number }) => {
+web3.eth.subscribe('newBlockHeaders', async (err, { number }) => {
+  if (err) return
   if (!number) return
   latestBlock = (await axios.get(GETH_URL, {
     method: 'eth_getBlockByNumber',
