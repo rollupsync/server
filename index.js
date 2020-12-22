@@ -3,11 +3,25 @@ const express = require('express')
 const fs = require('fs')
 const path = require('path')
 const Redis = require('ioredis')
+const Web3 = require('web3')
 
 const redis = new Redis({
   host: 'redis',
   port: 6379,
   db: 0,
+})
+
+const GETH_WS_URL = 'wss://mainnet.infura.io/ws/v3/6d3a403359fb4784b12a4cf6ed9f8ddd'
+const GETH_URL = 'https://kovan.infura.io/v3/6d3a403359fb4784b12a4cf6ed9f8ddd'
+const web3 = new Web3(GETH_WS_URL)
+
+let latestBlock
+web3.eth.subscribe('newBlockHeaders', ({ number }) => {
+  if (!number) return
+  latestBlock = await axios.get(GETH_URL, {
+    method: 'eth_getBlockByNumber',
+    params: [normalizeNumber(number), false],
+  })
 })
 
 const app = express()
@@ -96,7 +110,6 @@ app.post('/', async (req, res) => {
     res.status(401).json({ message: err.toString() })
     return
   }
-  const gethUrl = 'https://kovan.infura.io/v3/6d3a403359fb4784b12a4cf6ed9f8ddd'
 
   // const { data } = await axios({
   //   method: 'post',
@@ -120,7 +133,7 @@ app.post('/', async (req, res) => {
     }
     console.log(`[${+new Date()}] ${method} cache miss`)
   }
-  const { data } = await axios.post(gethUrl, req.body)
+  const { data } = await axios.post(GETH_URL, req.body)
   if (method === 'eth_getLogs') {
     console.log(method, params)
     console.log(data)
@@ -134,6 +147,9 @@ async function loadCache(method, params = []) {
     case 'eth_getTransactionByHash':
       return await redis.get(`tx_${normalizeHash(params[0])}`)
     case 'eth_getBlockByNumber':
+      if (params[0] === 'latest' && params[1] === false && latestBlock) {
+        return latestBlock
+      }
       if (isNaN(params[0])) return
       if (params[1]) {
         return await redis.get(`block_${normalizeNumber(params[0])}_full`)
