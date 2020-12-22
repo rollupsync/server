@@ -11,7 +11,7 @@ const redis = new Redis({
   db: 0,
 })
 
-const GETH_WS_URL = 'wss://mainnet.infura.io/ws/v3/6d3a403359fb4784b12a4cf6ed9f8ddd'
+const GETH_WS_URL = 'wss://kovan.infura.io/ws/v3/6d3a403359fb4784b12a4cf6ed9f8ddd'
 const GETH_URL = 'https://kovan.infura.io/v3/6d3a403359fb4784b12a4cf6ed9f8ddd'
 const web3 = new Web3(GETH_WS_URL)
 
