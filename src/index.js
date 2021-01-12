@@ -1,11 +1,9 @@
 const express = require('express')
 const Websocket = require('ws')
 const handlerCreator = require('./handler')
+const { providerUrls } = require('./config')
 
-const networks = [
-  'mainnet',
-  'goerli',
-]
+const networks = Object.keys(providerUrls)
 
 // handler functions keyed to network name
 const handlers = networks.reduce((acc, network) => {
