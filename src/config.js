@@ -1,5 +1,7 @@
 // Make all entries in array keyed to value true in object
-const objectify = (obj, key) => ({ ...(obj || {}), [key.toLowerCase()]: true })
+const objectify = (obj, key) => ({ ...obj, [key]: true })
+
+const addressObjectify = (obj, key) => ({ ...obj, [key.toLowerCase()]: true })
 
 module.exports = {
   providerUrls: {
@@ -11,7 +13,7 @@ module.exports = {
       '0x6b175474e89094c44da98b954eedeac495271d0f', // dai
       '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', // usdc
       '0x59bD11F8a5a833f26723D044CbB501a40C9C5E43', // fuel-js
-    ].reduce(objectify),
+    ].reduce(addressObjectify, {}),
     kovan: [
       '0x7c5FCcCd3C94Faf14A3a9391a7C52B734Ac9Fbd2', // fuel-js
       /** optimism kovan **/
@@ -20,16 +22,16 @@ module.exports = {
       '0xa9c7b1fcbf097d1e58e06d9c4499c4ce42c88e3e',
       '0x199e3167815fd8f7776e45bc2874effa3301977b',
       '0xf226e579003311c0f7fa40e4460a76f5f08fdf82',
-    ].reduce(objectify),
+    ].reduce(addressObjectify, {}),
     ropsten: [
       '0xB6A6412290f8A0d6B2E492E47DD82D010EC85c0a', // fuel-js
-    ].reduce(objectify),
+    ].reduce(addressObjectify, {}),
     rinkeby: [
       '0x40e070e36c39763805e9d8e3770E8dcD146a0b5F', // fuel-js
-    ].reduce(objectify),
+    ].reduce(addressObjectify, {}),
     goerli: [
       '0x0000000000000000000000000000000000000000'
-    ].reduce(objectify)
+    ].reduce(addressObjectify, {})
   },
   methods: [
     'eth_chainId',
@@ -44,6 +46,7 @@ module.exports = {
     'eth_getTransactionCount',
     'eth_gasPrice',
     'eth_sendRawTransaction',
-    'eth_sendTransaction'
-  ].reduce(objectify),
+    'eth_sendTransaction',
+    'eth_getCode',
+  ].reduce(objectify, {}),
 }

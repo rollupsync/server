@@ -9,8 +9,8 @@ const networks = [
 
 // handler functions keyed to network name
 const handlers = networks.reduce((acc, network) => {
-  return { ...(acc || {}), [network]: handlerCreator(network) }
-})
+  return { ...acc, [network]: handlerCreator(network) }
+}, {})
 
 /** http server **/
 const app = express()
@@ -28,6 +28,7 @@ app.post('/', async (req, res) => {
     const data = await handler(req.body)
     res.json(data)
   } catch (err) {
+    console.log(err)
     res.status(422).json({ message: err.toString() })
   }
 })

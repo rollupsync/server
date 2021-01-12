@@ -6,7 +6,12 @@ const axios = require('axios')
 const { providerUrls, methods } = require('./config')
 const { verifyParams, normalizeHash, normalizeNumber } = require('./utils')
 
-module.exports = async (network, skipCache = false) => {
+const storageByNetwork = {}
+
+module.exports = async (network) => {
+  storageByNetwork[network] = {
+    logBoundsByAddress: {},
+  }
   const provider = providerUrls[network]
   if (!provider) {
     throw new Error(`No provider found for network: ${network}`)
@@ -27,7 +32,7 @@ module.exports = async (network, skipCache = false) => {
   })
 
   /** request handler **/
-  return async (info = {}) => {
+  return async (info = {}, skipCache = false) => {
     const { jsonrpc, method, params, id } = info
 
     if (jsonrpc !== '2.0') {
@@ -43,7 +48,7 @@ module.exports = async (network, skipCache = false) => {
         throw new Error(err.toString())
       }
 
-      const cachedResult = await loadCache(redis, method, params)
+      const cachedResult = await loadCache(network, redis, method, params)
       if (cachedResult) {
         console.log(`[${+new Date()}] ${method} cache hit`)
         return {
@@ -59,11 +64,11 @@ module.exports = async (network, skipCache = false) => {
       }
       if (method === 'eth_getLogs') {
         console.log(method, params)
-        console.log(data)
+        console.log(info)
       }
     }
     const data = await proxyReq(provider, info)
-    // cache(redis, method, params, data.result).catch(console.log)
+    cache(network, redis, method, params, data.result).catch(console.log)
     return data
   }
 }
@@ -106,7 +111,7 @@ function tryJSONParse(data) {
   }
 }
 
-async function loadCache(redis, method, params = []) {
+async function loadCache(network, redis, method, params = []) {
   switch (method) {
     case 'eth_chainId':
       return chainId
@@ -131,7 +136,7 @@ async function loadCache(redis, method, params = []) {
       const addresses = [address].flat()
       const promises = []
       for (const addr of addresses) {
-        promises.push(loadLogBounds(addr))
+        promises.push(loadLogBounds(network, redis, addr))
       }
       const ranges = await Promise.all(promises)
       for (const [ earliest, latest ] of ranges) {
@@ -167,7 +172,7 @@ async function loadCache(redis, method, params = []) {
   }
 }
 
-async function cache(redis, method, params = [], result) {
+async function cache(network, redis, method, params = [], result) {
   const resultString = JSON.stringify(result)
   switch (method) {
     case 'eth_getTransactionByHash':
@@ -197,19 +202,19 @@ async function cache(redis, method, params = [], result) {
 
       for (const addr of addresses) {
         // update earliest and latest block
-        const [ earliest, latest ] = await loadLogBounds(addr)
+        const [ earliest, latest ] = await loadLogBounds(network, redis, addr)
         const earlyKey = `logs_${normalizeHash(addr)}_earliest`
         const lateKey = `logs_${normalizeHash(addr)}_latest`
         const promises = []
         if (!earliest || start < +earliest) {
           // update
           promises.push(redis.set(earlyKey, normalizeNumber(start)))
-          logBoundsByAddress[normalizeHash(addr)][0] = start
+          storageByNetwork[network].logBoundsByAddress[normalizeHash(addr)][0] = start
         }
         if (!latest || end > +latest) {
           // update
           promises.push(redis.set(lateKey, normalizeNumber(end)))
-          logBoundsByAddress[normalizeHash(addr)][1] = end
+          storageByNetwork[network].logBoundsByAddress[normalizeHash(addr)][1] = end
         }
         await Promise.all(promises)
       }
@@ -219,10 +224,10 @@ async function cache(redis, method, params = [], result) {
   }
 }
 
-async function loadLogBounds(_addr) {
+async function loadLogBounds(network, redis, _addr) {
   const addr = normalizeHash(_addr)
-  if (logBoundsByAddress[addr]) {
-    return logBoundsByAddress[addr]
+  if (storageByNetwork[network].logBoundsByAddress[addr]) {
+    return storageByNetwork[network].logBoundsByAddress[addr]
   }
   const earlyKey = `logs_${addr}_earliest`
   const lateKey = `logs_${addr}_latest`
@@ -231,11 +236,11 @@ async function loadLogBounds(_addr) {
     redis.get(lateKey),
   ])
   if (!results[0] || !results[1]) {
-    logBoundsByAddress[addr] = [0, 0]
+    storageByNetwork[network].logBoundsByAddress[addr] = [0, 0]
   } else {
-    logBoundsByAddress[addr] = results
+    storageByNetwork[network].logBoundsByAddress[addr] = results
   }
-  return logBoundsByAddress[addr]
+  return storageByNetwork[network].logBoundsByAddress[addr]
 }
 
 const logPath = path.join(__dirname, 'requests.log')

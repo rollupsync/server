@@ -3,6 +3,7 @@ const { addresses } = require('./config')
 module.exports = {
   normalizeHash,
   normalizeNumber,
+  verifyParams,
 }
 
 function normalizeNumber(num) {
@@ -10,7 +11,8 @@ function normalizeNumber(num) {
 }
 
 function normalizeHash(hash) {
-  return hash.toLowerCase()
+  if (!hash) return
+  return `0x${hash.replace('0x', '').toLowerCase()}`
 }
 
 function verifyParams(network, method, params = []) {
@@ -19,7 +21,7 @@ function verifyParams(network, method, params = []) {
   const legalAddresses = addresses[network]
   if (method === 'eth_call') {
     const { to, from } = params[0]
-    if (!legalAddresses[to] && !legalAddresses[from]) {
+    if (!legalAddresses[normalizeHash(to)] && !legalAddresses[normalizeHash(from)]) {
       throw new Error(`Neither ${to} or ${from} are whitelisted for ${method}`)
     }
   } else if (method === 'eth_getBlockByNumber') {
@@ -31,18 +33,18 @@ function verifyParams(network, method, params = []) {
     // }
   } else if (method === 'eth_getLogs') {
     const { address } = params[0]
-    if (!Array.isArray(address) && !legalAddresses[address]) {
+    if (!Array.isArray(address) && !legalAddresses[normalizeHash(address)]) {
       throw new Error(`Address ${address} is not whitelisted for ${method}`)
     } else {
       return
     }
     for (const addr of address) {
-      if (legalAddresses[addr]) continue
+      if (legalAddresses[normalizeHash(addr)]) continue
       throw new Error(`Address ${addr} is not whitelisted for ${method}`)
     }
   } else if (method === 'eth_estimateGas') {
     const { from, to } = params[0]
-    if (!legalAddresses[from] && !legalAddresses[to]) {
+    if (!legalAddresses[normalizeHash(from)] && !legalAddresses[normalizeHash(to)]) {
       throw new Error(`Neither ${from} or ${to} are whitelisted for ${method}`)
     }
   }
