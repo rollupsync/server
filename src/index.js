@@ -1,6 +1,6 @@
 const express = require('express')
 const Websocket = require('ws')
-const handlerCreator = require('./src/handler')
+const handlerCreator = require('./handler')
 
 const networks = [
   'mainnet',
