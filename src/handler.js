@@ -116,6 +116,8 @@ async function loadCache(network, redis, method, params = []) {
   switch (method) {
     case 'eth_chainId':
       return chainId
+    case 'eth_blockNumber':
+      return normalizeNumber(latestBlock.number)
     case 'eth_getTransactionByHash':
       return await redis.get(`tx_${normalizeHash(params[0])}`)
     case 'eth_getBlockByNumber':
