@@ -4,6 +4,37 @@ An cache system to improve rollup sync performance.
 
 `rollup client` <--> `redis` <--> `geth`
 
+## Usage
+
+See the [verifiers](https://github.com/rollupsync/verifiers) repo for preconfigured rollup nodes.
+
+## Available Endpoints
+
+The following endpoints are available for synchronizing rollups.
+
+### Mainnet
+
+Urls:
+- `https://mainnet.rollupsync.com`
+- `wss://mainnet.rollupsync.com/ws`
+
+Supported rollups:
+- [Fuel](https://fuel.sh)
+
+### Görli
+
+Urls:
+- `https://goerli.rollupsync.com`
+- `wss://goerli.rollupsync.com/ws`
+
+Supported rollups:
+
+### Kovan
+
+Urls:
+- `https://kovan.rollupsync.com`
+- `wss://kovan.rollupsync.com/ws`
+
 ### Testing
 
 The current implementation supports the Optimism rollup on the kovan network. To test sync performance set the following in your Optimism verifier `docker-compose.env`:
