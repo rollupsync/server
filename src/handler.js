@@ -9,19 +9,19 @@ const { verifyParams, normalizeHash, normalizeNumber } = require('./utils')
 const storageByNetwork = {}
 
 module.exports = async (network) => {
-  storageByNetwork[network] = {
-    logBoundsByAddress: {},
-  }
   const provider = providerUrls[network]
   if (!provider) {
     throw new Error(`No provider found for network: ${network}`)
   }
   const web3 = new Web3(provider)
-  let latestBlock
+  storageByNetwork[network] = {
+    logBoundsByAddress: {},
+    latestBlock: (await web3.eth.getBlock('latest')),
+  }
   web3.eth.subscribe('newBlockHeaders', async (err, { number }) => {
     if (err) return
     if (!number) return
-    latestBlock = await web3.eth.getBlock(number)
+    storageByNetwork[network].latestBlock = await web3.eth.getBlock(number)
   })
 
   const chainId = normalizeNumber(await web3.eth.getChainId())
@@ -112,6 +112,7 @@ function tryJSONParse(data) {
 }
 
 async function loadCache(network, redis, method, params = []) {
+  const { latestBlock } = storageByNetwork[network]
   switch (method) {
     case 'eth_chainId':
       return chainId
@@ -132,7 +133,7 @@ async function loadCache(network, redis, method, params = []) {
       const { address, fromBlock, toBlock, topics } = params[0]
       if (!fromBlock || !toBlock) return
       const start = +fromBlock
-      const end = +toBlock
+      const end = toBlock === 'latest' ? +latestBlock.number : +toBlock
       const addresses = [address].flat()
       const promises = []
       for (const addr of addresses) {
@@ -174,6 +175,7 @@ async function loadCache(network, redis, method, params = []) {
 
 async function cache(network, redis, method, params = [], result) {
   const resultString = JSON.stringify(result)
+  const { latestBlock } = storageByNetwork[network]
   switch (method) {
     case 'eth_getTransactionByHash':
       await redis.set(`tx_${normalizeHash(params[0])}`, resultString)
@@ -190,7 +192,7 @@ async function cache(network, redis, method, params = [], result) {
       const { address, fromBlock, toBlock, topics } = params[0]
       if (!fromBlock || !toBlock) return
       const start = +fromBlock
-      const end = +toBlock
+      const end = toBlock === 'latest' ? +latestBlock.number : +toBlock
       const addresses = [address].flat()
 
       const promises = []
