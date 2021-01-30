@@ -1,8 +1,9 @@
 const express = require('express')
 const Websocket = require('ws')
+const { nanoid } = require('nanoid')
+const Redis = require('ioredis')
 const handlerCreator = require('./handler')
 const { providerUrls } = require('./config')
-const { nanoid } = require('nanoid')
 
 const networks = Object.keys(providerUrls)
 
