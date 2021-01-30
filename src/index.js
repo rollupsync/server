@@ -2,6 +2,7 @@ const express = require('express')
 const Websocket = require('ws')
 const handlerCreator = require('./handler')
 const { providerUrls } = require('./config')
+const { nanoid } = require('nanoid')
 
 const networks = Object.keys(providerUrls)
 
@@ -15,6 +16,22 @@ const app = express()
 app.use(express.json())
 app.enable('trust proxy')
 
+const logDBIndex = 99999
+const logRedis = new Redis({
+  host: 'redis',
+  port: 6379,
+  db: logDBIndex,
+})
+async function logRequest(method) {
+  // store it in the db with a ttl
+  const ttl = 24 * 60 * 60 // 1 day in seconds
+  logRedis.set(`${+new Date() / 1000}-${method}-${nanoid(5)}`, method, 'EX', ttl)
+}
+
+app.get('/request-count', async (req, res) => {
+  res.json({ count: (await logRedis.dbsize()) })
+})
+
 app.post('/', async (req, res) => {
   const network = req.hostname.split('.').shift().toLowerCase()
   if (!handlers[network]) {
@@ -25,6 +42,8 @@ app.post('/', async (req, res) => {
     const handler = await handlers[network]
     const data = await handler(req.body)
     res.json(data)
+    logRequest(req.body.method)
+      .catch((err) => console.log(err, 'Error logging request'))
   } catch (err) {
     console.log(err)
     res.status(422).json({ message: err.toString() })
@@ -81,6 +100,8 @@ wss.on('connection', (ws, req) => {
       const handler = await handlers[network]
       const res = await handler(data)
       ws.send(JSON.stringify(res))
+      logRequest(data.method)
+        .catch((err) => console.log(err, 'Error logging request'))
     } catch (err) {
       console.log(err)
       ws.send(JSON.stringify({ id: data.id, jsonrpc: data.jsonrpc, err: err.toString() }))
