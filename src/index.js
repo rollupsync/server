@@ -15,6 +15,12 @@ const handlers = networks.reduce((acc, network) => {
 /** http server **/
 const app = express()
 app.use(express.json())
+app.use((_, res, next) => {
+  res.set('Access-Control-Allow-Origin', '*')
+  res.set('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+  res.set('Access-Control-Allow-Headers', 'Origin, Content-Type, Access-Control-Allow-Origin')
+  next()
+})
 app.enable('trust proxy')
 
 const logDBIndex = 99999
