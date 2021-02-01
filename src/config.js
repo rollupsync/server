@@ -51,5 +51,6 @@ module.exports = {
     'eth_sendRawTransaction',
     'eth_sendTransaction',
     'eth_getCode',
+    'eth_getBalance',
   ].reduce(objectify, {}),
 }
