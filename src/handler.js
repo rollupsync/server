@@ -26,7 +26,7 @@ module.exports = async (network) => {
 
   const chainId = normalizeNumber(await web3.eth.getChainId())
   // map chain id to a database index
-  const chainNum = chainId.toString(10)
+  const chainNum = (+chainId).toString(10)
   const databaseIndex = {
     '1': 1,
     '3': 2,
