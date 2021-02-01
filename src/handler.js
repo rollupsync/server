@@ -25,10 +25,22 @@ module.exports = async (network) => {
   })
 
   const chainId = normalizeNumber(await web3.eth.getChainId())
+  // map chain id to a database index
+  const chainNum = chainId.toString(10)
+  const databaseIndex = {
+    '1': 1,
+    '3': 2,
+    '4': 3,
+    '5': 4,
+    '42': 5,
+  }
+  if (isNaN(databaseIndex[chainNum])) {
+    throw new Error(`Database improperly configured for network ${network}`)
+  }
   const redis = new Redis({
     host: 'redis',
     port: 6379,
-    db: chainId.toString(10),
+    db: databaseIndex[chainNum],
   })
 
   /** request handler **/

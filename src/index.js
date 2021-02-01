@@ -23,7 +23,7 @@ app.use((_, res, next) => {
 })
 app.enable('trust proxy')
 
-const logDBIndex = 99999
+const logDBIndex = 15
 const logRedis = new Redis({
   host: 'redis',
   port: 6379,
