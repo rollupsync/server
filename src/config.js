@@ -3,11 +3,17 @@ const objectify = (obj, key) => ({ ...obj, [key]: true })
 
 const addressObjectify = (obj, key) => ({ ...obj, [key.toLowerCase()]: true })
 
+const {
+  MAINNET_URL,
+  GOERLI_URL,
+  KOVAN_URL,
+} = process.env
+
 module.exports = {
   providerUrls: {
-    mainnet: 'ws://192.168.1.199:8546',
-    goerli: 'ws://192.168.1.199:9546',
-    kovan: 'ws://192.168.1.199:8850',
+    mainnet: MAINNET_URL,
+    goerli: GOERLI_URL,
+    kovan: KOVAN_URL,
   },
   addresses: {
     mainnet: [
