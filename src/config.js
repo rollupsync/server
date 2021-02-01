@@ -7,6 +7,7 @@ module.exports = {
   providerUrls: {
     mainnet: 'ws://192.168.1.199:8546',
     goerli: 'ws://192.168.1.199:9546',
+    kovan: 'ws://192.168.1.199:8850',
   },
   addresses: {
     mainnet: [
@@ -22,6 +23,8 @@ module.exports = {
       '0xa9c7b1fcbf097d1e58e06d9c4499c4ce42c88e3e',
       '0x199e3167815fd8f7776e45bc2874effa3301977b',
       '0xf226e579003311c0f7fa40e4460a76f5f08fdf82',
+      /** arbitrum kovan **/
+      '0xE681857DEfE8b454244e701BA63EfAa078d7eA85',
     ].reduce(addressObjectify, {}),
     ropsten: [
       '0xB6A6412290f8A0d6B2E492E47DD82D010EC85c0a', // fuel-js
