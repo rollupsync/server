@@ -155,8 +155,8 @@ async function loadCache(network, redis, method, params = []) {
       const promises = []
       for (const addr of addresses) {
         promises.push(Promise.all([
-          storageByNetwork[network].worker.earliestLog(),
-          storageByNetwork[network].worker.latestLog(),
+          storageByNetwork[network].worker.earliestLog(addr),
+          storageByNetwork[network].worker.latestLog(addr),
         ]))
       }
       const ranges = await Promise.all(promises)
