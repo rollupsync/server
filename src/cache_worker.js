@@ -89,7 +89,7 @@ class CacheWorker {
         // shouldn't get any pending events but just in case
         if (log.blockNumber === null) continue
         const key = `log_${normalizeHash(log.address)}`
-        await this.redis.zadd(key, log.blockNumber, JSON.stringify(log))
+        await this.redis.zadd(key, +log.blockNumber, JSON.stringify(log))
       }
       await this.updateLatestLog(address, toBlock)
       if (toBlock >= finalBlock) break

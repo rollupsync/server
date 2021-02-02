@@ -4,7 +4,12 @@ const Websocket = require('ws')
 const path = require('path')
 const axios = require('axios')
 const { providerUrls, methods } = require('./config')
-const { verifyParams, normalizeHash, normalizeNumber } = require('./utils')
+const {
+  verifyParams,
+  normalizeHash,
+  normalizeNumber,
+  databaseIndex,
+} = require('./utils')
 
 const storageByNetwork = {}
 
@@ -24,23 +29,11 @@ module.exports = async (network) => {
     storageByNetwork[network].latestBlock = await web3.eth.getBlock(number)
   })
 
-  const chainId = normalizeNumber(await web3.eth.getChainId())
-  // map chain id to a database index
-  const chainNum = (+chainId).toString(10)
-  const databaseIndex = {
-    '1': 1,
-    '3': 2,
-    '4': 3,
-    '5': 4,
-    '42': 5,
-  }
-  if (isNaN(databaseIndex[chainNum])) {
-    throw new Error(`Database improperly configured for network ${network}`)
-  }
+  const chainId = await web3.eth.getChainId()
   const redis = new Redis({
     host: 'redis',
     port: 6379,
-    db: databaseIndex[chainNum],
+    db: databaseIndex(chainId),
   })
 
   /** request handler **/
@@ -73,10 +66,6 @@ module.exports = async (network) => {
           console.log(method, params)
         }
         console.log(`[${+new Date()}] ${method} cache miss`)
-      }
-      if (method === 'eth_getLogs') {
-        console.log(method, params)
-        console.log(info)
       }
     }
     const data = await proxyReq(provider, info)
@@ -162,29 +151,39 @@ async function loadCache(network, redis, method, params = []) {
       for (const addr of addresses) {
         const key = `log_${normalizeHash(addr)}`
         _promises.push(
-          redis.zrange(key, start, end)
+          redis.zrangebyscore(key, start, end)
         )
       }
       const results = await Promise.all(_promises)
       const final = []
       for (const range of results) {
         for (const item of range) {
-          const parsed = JSON.parse(r)
+          const parsed = JSON.parse(item)
           // filter by topic here
-          if (topics.length) {
-            let include = false
-            for (const t of topics) {
-              if (parsed.topics.map(t => t.replace('0x', '').toLowerCase()).indexOf(t.toLowerCase().replace('0x', '')) !== -1) include = true
-            }
-            if (!include) continue
-          }
-          final.push(JSON.parse(r))
+          if (!topicMatch(parsed, topics)) continue
+          final.push(parsed)
         }
       }
       return final
     default:
       break
   }
+}
+
+function topicMatch(_event, topics) {
+  if (!topics) return true // no filter so match anything
+  for (const [index, topic] of Object.entries(topics)) {
+    if (topic === null) continue // match anything
+    let foundMatch = false
+    for (const t of [topic].flat()) {
+      if (normalizeHash(_event.topics[index]) === normalizeHash(t)) {
+        foundMatch = true
+        break
+      }
+    }
+    if (!foundMatch) return false
+  }
+  return true
 }
 
 async function cache(network, redis, method, params = [], result) {
@@ -200,39 +199,6 @@ async function cache(network, redis, method, params = [], result) {
         await redis.set(`block_${normalizeNumber(params[0])}_full`, resultString)
       } else {
         await redis.set(`block_${normalizeNumber(params[0])}`, resultString)
-      }
-      break
-    case 'eth_getLogs':
-      const { address, fromBlock, toBlock, topics } = params[0]
-      if (!fromBlock || !toBlock) return
-      const start = +fromBlock
-      const end = toBlock === 'latest' ? +latestBlock.number : +toBlock
-      const addresses = [address].flat()
-
-      const promises = []
-      for (const logOutput of result) {
-        const key = `log_${normalizeHash(logOutput.address)}`
-        promises.push(redis.zadd(key, +logOutput.blockNumber, JSON.stringify(logOutput)))
-      }
-      await Promise.all(promises)
-
-      for (const addr of addresses) {
-        // update earliest and latest block
-        const [ earliest, latest ] = await loadLogBounds(network, redis, addr)
-        const earlyKey = `logs_${normalizeHash(addr)}_earliest`
-        const lateKey = `logs_${normalizeHash(addr)}_latest`
-        const promises = []
-        if (!earliest || start < +earliest) {
-          // update
-          promises.push(redis.set(earlyKey, normalizeNumber(start)))
-          storageByNetwork[network].logBoundsByAddress[normalizeHash(addr)][0] = start
-        }
-        if (!latest || end > +latest) {
-          // update
-          promises.push(redis.set(lateKey, normalizeNumber(end)))
-          storageByNetwork[network].logBoundsByAddress[normalizeHash(addr)][1] = end
-        }
-        await Promise.all(promises)
       }
       break
     default:

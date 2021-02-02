@@ -42,6 +42,23 @@ module.exports = {
       '0x0000000000000000000000000000000000000000'
     ].reduce(addressObjectify, {})
   },
+  contracts: {
+    mainnet: [
+      {
+        address: '0x59bD11F8a5a833f26723D044CbB501a40C9C5E43',
+        genesisBlock: 11559670,
+      }
+    ],
+    kovan: [
+      {
+        address: '0x7c5FCcCd3C94Faf14A3a9391a7C52B734Ac9Fbd2',
+        genesisBlock: 22195579,
+      },
+    ],
+    ropsten: [],
+    rinkeby: [],
+    goerli: [],
+  },
   methods: [
     'eth_chainId',
     'eth_syncing',
