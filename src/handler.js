@@ -140,7 +140,7 @@ async function loadCache(network, redis, method, params = []) {
       const { address, fromBlock, toBlock, topics } = params[0]
       if (!fromBlock || !toBlock) return
       const start = +fromBlock
-      const end = toBlock === 'latest' ? +latestBlock.number : +toBlock
+      const end = toBlock === 'latest' || toBlock > latestBlock.number ? +latestBlock.number : +toBlock
       const addresses = [address].flat()
       const promises = []
       for (const addr of addresses) {
