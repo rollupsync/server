@@ -75,6 +75,7 @@ module.exports = class CacheWorker {
       await this.updateEarliestLog(address, genesisBlock)
     }
     const startBlock = Math.max(genesisBlock, +latestLogBlock)
+    if (startBlock === +latestLogBlock && finalBlock === +latestLogBlock) return
     let offset = 0
     let batchCount = 1000
     for (;;) {
