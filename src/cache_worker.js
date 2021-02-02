@@ -24,7 +24,8 @@ module.exports = class CacheWorker {
     this.chainId = chainId
     this.providerUrl = providerUrl
     this.networkContracts = networkContracts
-    this.scanningAddresses = {}
+    this.scanning = false
+    this.scanQueued = false
     this.web3 = new Web3(this.providerUrl)
     // const chainId = await this.web3.eth.getChainId()
     this.redis = new Redis({
@@ -35,17 +36,29 @@ module.exports = class CacheWorker {
   }
 
   async syncContracts(blockNumber) {
+    if (this.scanning) {
+      this.scanQueued = true
+      return
+    }
+    this.scanning = true
     const promises = []
     const latestBlock = blockNumber || (await this.web3.eth.getBlockNumber())
     for (const { address } of this.networkContracts) {
-      promises.push(this.scan(address, +latestBlock))
+      promises.push(this._scan(address, +latestBlock))
     }
-    await Promise.all(promises)
+    try {
+      await Promise.all(promises)
+    } catch (err) {
+      console.log(`Error scanning ${this.network} contracts`)
+    }
+    this.scanning = false
+    if (this.scanQueued) {
+      this.scanQueued = false
+      await this.syncContracts()
+    }
   }
 
-  async scan(address, finalBlock) {
-    if (this.scanningAddresses[address]) return
-    this.scanningAddresses[address] = true
+  async _scan(address, finalBlock) {
     const [
       earliestLogBlock,
       latestLogBlock,
@@ -83,7 +96,6 @@ module.exports = class CacheWorker {
       if (toBlock >= finalBlock) break
       offset += batchCount + 1
     }
-    delete this.scanningAddresses[address]
   }
 
   // Return the block number of the earliest scanned block logs for an address
