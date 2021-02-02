@@ -20,13 +20,15 @@ module.exports = async (network) => {
     throw new Error(`No provider found for network: ${network}`)
   }
   const web3 = new Web3(provider)
+  const chainId = await web3.eth.getChainId()
+  const worker = new CacheWorker(network, provider, chainId)
   storageByNetwork[network] = {
     logBoundsByAddress: {},
     latestBlock: (await web3.eth.getBlock('latest')),
+    worker,
   }
-  const chainId = await web3.eth.getChainId()
-  const worker = new CacheWorker(network, provider, chainId)
   worker.syncContracts().catch(console.log) // asynchronously start processing
+
   let latestBlock = 0
   web3.eth.subscribe('newBlockHeaders', async (err, { number }) => {
     if (err) return
@@ -34,7 +36,7 @@ module.exports = async (network) => {
     latestBlock = number
     const blockPromise = web3.eth.getBlock(number)
     await Promise.race([
-      new Promise(r => setTimeout(r, 2000)),
+      new Promise(r => setTimeout(r, 500)),
       worker.syncContracts(number),
     ])
     const block = await blockPromise
@@ -152,7 +154,10 @@ async function loadCache(network, redis, method, params = []) {
       const addresses = [address].flat()
       const promises = []
       for (const addr of addresses) {
-        promises.push(loadLogBounds(network, redis, addr))
+        promises.push(Promise.all([
+          storageByNetwork[network].worker.earliestLog(),
+          storageByNetwork[network].worker.latestLog(),
+        ]))
       }
       const ranges = await Promise.all(promises)
       for (const [ earliest, latest ] of ranges) {
@@ -216,25 +221,6 @@ async function cache(network, redis, method, params = [], result) {
     default:
       break
   }
-}
-
-async function loadLogBounds(network, redis, _addr) {
-  const addr = normalizeHash(_addr)
-  if (storageByNetwork[network].logBoundsByAddress[addr]) {
-    return storageByNetwork[network].logBoundsByAddress[addr]
-  }
-  const earlyKey = `logs_${addr}_earliest`
-  const lateKey = `logs_${addr}_latest`
-  const results = await Promise.all([
-    redis.get(earlyKey),
-    redis.get(lateKey),
-  ])
-  if (!results[0] || !results[1]) {
-    storageByNetwork[network].logBoundsByAddress[addr] = [0, 0]
-  } else {
-    storageByNetwork[network].logBoundsByAddress[addr] = results
-  }
-  return storageByNetwork[network].logBoundsByAddress[addr]
 }
 
 const logPath = path.join(__dirname, 'requests.log')
