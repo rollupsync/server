@@ -28,7 +28,7 @@ module.exports = async (network) => {
     if (err) return
     if (!number) return
     latestBlock = number
-    await new Promise(r => setTimeout(r, 400)) // wait for the worker to update the cache
+    await new Promise(r => setTimeout(r, 100)) // wait for the worker to update the cache
     if (latestBlock !== number) return // in case two blocks arrive quickly
     storageByNetwork[network].latestBlock = await web3.eth.getBlock(number)
   })
@@ -140,7 +140,7 @@ async function loadCache(network, redis, method, params = []) {
       const { address, fromBlock, toBlock, topics } = params[0]
       if (!fromBlock || !toBlock) return
       const start = +fromBlock
-      const end = toBlock === 'latest' || toBlock > latestBlock.number ? +latestBlock.number : +toBlock
+      const end = toBlock === 'latest' || toBlock > +latestBlock.number ? +latestBlock.number : +toBlock
       const addresses = [address].flat()
       const promises = []
       for (const addr of addresses) {
