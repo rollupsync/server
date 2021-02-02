@@ -17,15 +17,6 @@ services:
       KOVAN_URL: ws://192.168.1.199:8850
       GOERLI_URL: ws://192.168.1.199:9546
       NETWORK_OVERRIDE: mainnet
-  rollup-sync-worker:
-    build: .
-    depends_on:
-      - redis
-    environment:
-      MAINNET_URL: ws://192.168.1.199:8546
-      KOVAN_URL: ws://192.168.1.199:8850
-      GOERLI_URL: ws://192.168.1.199:9546
-    command: node ./src/cache_worker
 
 volumes:
   redis_cache:

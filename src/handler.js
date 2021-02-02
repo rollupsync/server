@@ -10,6 +10,7 @@ const {
   normalizeNumber,
   databaseIndex,
 } = require('./utils')
+const CacheWorker = require('./cache_worker')
 
 const storageByNetwork = {}
 
@@ -23,18 +24,24 @@ module.exports = async (network) => {
     logBoundsByAddress: {},
     latestBlock: (await web3.eth.getBlock('latest')),
   }
+  const chainId = await web3.eth.getChainId()
+  const worker = new CacheWorker(network, provider, chainId)
+  worker.syncContracts().catch(console.log) // asynchronously start processing
   let latestBlock = 0
   web3.eth.subscribe('newBlockHeaders', async (err, { number }) => {
     if (err) return
     if (!number) return
     latestBlock = number
-    await new Promise(r => setTimeout(r, 100)) // wait for the worker to update the cache
-    const block = await web3.eth.getBlock(number)
+    const blockPromise = web3.eth.getBlock(number)
+    await Promise.race([
+      new Promise(r => setTimeout(r, 2000)),
+      worker.syncContracts(number),
+    ])
+    const block = await blockPromise
     if (latestBlock !== number) return // in case two blocks arrive quickly
     storageByNetwork[network].latestBlock = block
   })
 
-  const chainId = await web3.eth.getChainId()
   const redis = new Redis({
     host: 'redis',
     port: 6379,

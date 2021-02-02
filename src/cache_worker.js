@@ -9,8 +9,8 @@ const {
 } = require('./utils')
 
 // Primarily used for synchronizing event logs for a contract
-class CacheWorker {
-  constructor(network, providerUrl) {
+module.exports = class CacheWorker {
+  constructor(network, providerUrl, chainId) {
     if (!providerUrl) {
       console.log(`Error: no provider url for network ${network}`)
       process.exit(1)
@@ -21,29 +21,17 @@ class CacheWorker {
       process.exit(1)
     }
     this.network = network
+    this.chainId = chainId
     this.providerUrl = providerUrl
     this.networkContracts = networkContracts
     this.scanningAddresses = {}
-  }
-
-  async start() {
     this.web3 = new Web3(this.providerUrl)
-    const chainId = await this.web3.eth.getChainId()
+    // const chainId = await this.web3.eth.getChainId()
     this.redis = new Redis({
       host: 'redis',
       port: 6379,
       db: databaseIndex(chainId),
     })
-    this.web3.eth.subscribe('newBlockHeaders', async (err, data) => {
-      if (err) {
-        console.log(err)
-        console.log(`Error receiving block headers`)
-      }
-      // it's a pending block
-      if (data.number === null) return
-      await this.syncContracts(data.number)
-    })
-    await this.syncContracts()
   }
 
   async syncContracts(blockNumber) {
@@ -122,15 +110,3 @@ class CacheWorker {
     this.redis.set(lateKey, normalizeNumber(blockNumber))
   }
 }
-
-// Entrypoint
-;(async () => {
-  // start the worker loop, subsribe to various providers
-  const promises = []
-  for (const [network, providerUrl] of Object.entries(providerUrls)) {
-    const worker = new CacheWorker(network, providerUrl)
-    promises.push(worker.start())
-  }
-  await Promise.all(promises)
-  console.log('All networks synced!')
-})()
