@@ -4,6 +4,7 @@ module.exports = {
   normalizeHash,
   normalizeNumber,
   verifyParams,
+  databaseIndex,
 }
 
 function normalizeNumber(num) {
@@ -48,4 +49,19 @@ function verifyParams(network, method, params = []) {
       throw new Error(`Neither ${from} or ${to} are whitelisted for ${method}`)
     }
   }
+}
+
+function databaseIndex(chainId) {
+  const chainNum = (+normalizeNumber(chainId)).toString(10)
+  const databaseIndex = {
+    '1': 1,
+    '3': 2,
+    '4': 3,
+    '5': 4,
+    '42': 5,
+  }
+  if (isNaN(databaseIndex[chainNum])) {
+    throw new Error(`Database improperly configured for network ${network}`)
+  }
+  return databaseIndex[chainNum]
 }
