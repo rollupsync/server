@@ -23,9 +23,13 @@ module.exports = async (network) => {
     logBoundsByAddress: {},
     latestBlock: (await web3.eth.getBlock('latest')),
   }
+  let latestBlock = 0
   web3.eth.subscribe('newBlockHeaders', async (err, { number }) => {
     if (err) return
     if (!number) return
+    latestBlock = number
+    await new Promise(r => setTimeout(r, 400)) // wait for the worker to update the cache
+    if (latestBlock !== number) return // in case two blocks arrive quickly
     storageByNetwork[network].latestBlock = await web3.eth.getBlock(number)
   })
 
