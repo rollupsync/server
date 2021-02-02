@@ -29,8 +29,9 @@ module.exports = async (network) => {
     if (!number) return
     latestBlock = number
     await new Promise(r => setTimeout(r, 100)) // wait for the worker to update the cache
+    const block = await web3.eth.getBlock(number)
     if (latestBlock !== number) return // in case two blocks arrive quickly
-    storageByNetwork[network].latestBlock = await web3.eth.getBlock(number)
+    storageByNetwork[network].latestBlock = block
   })
 
   const chainId = await web3.eth.getChainId()
