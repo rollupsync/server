@@ -25,6 +25,7 @@ module.exports = async (network) => {
   storageByNetwork[network] = {
     logBoundsByAddress: {},
     latestBlock: (await web3.eth.getBlock('latest')),
+    chainId,
     worker,
   }
   worker.syncContracts().catch(console.log) // asynchronously start processing
@@ -130,7 +131,7 @@ async function loadCache(network, redis, method, params = []) {
   const { latestBlock } = storageByNetwork[network]
   switch (method) {
     case 'eth_chainId':
-      return chainId
+      return storageByNetwork[network].chainId
     case 'eth_blockNumber':
       return normalizeNumber(latestBlock.number)
     case 'eth_getTransactionByHash':

@@ -40,6 +40,9 @@ module.exports = {
       '0x40e070e36c39763805e9d8e3770E8dcD146a0b5F', // fuel-js
     ].reduce(addressObjectify, {}),
     goerli: [
+      /** zkopru goerli **/
+      '0xcdd5c38a39fdc9c77fe3a72998d34c8ce99d2d34',
+      '0xfea288f0151db881afa7e2e47b898c525d409bb8',
       '0x0000000000000000000000000000000000000000'
     ].reduce(addressObjectify, {})
   },
@@ -58,7 +61,16 @@ module.exports = {
     ],
     ropsten: [],
     rinkeby: [],
-    goerli: [],
+    goerli: [
+      {
+        address: '0xcdd5c38a39fdc9c77fe3a72998d34c8ce99d2d34',
+        genesisBlock: 4163398,
+      },
+      {
+        address: '0xfea288f0151db881afa7e2e47b898c525d409bb8',
+        genesisBlock: 4163400,
+      }
+    ],
   },
   methods: [
     'eth_chainId',

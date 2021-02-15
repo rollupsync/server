@@ -40,7 +40,7 @@ app.get('/request-count', async (req, res) => {
 })
 
 app.post('/', async (req, res) => {
-  const network = process.env.NETWORK_OVERRIDE || req.hostname.split('.').shift().toLowerCase()
+  const network = process.env.NETWORK_OVERRIDE || req.body.network || req.hostname.split('.').shift().toLowerCase()
   if (!handlers[network]) {
     res.status(404).json({ message: `Invalid network: ${network}`})
     return
