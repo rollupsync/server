@@ -20,6 +20,7 @@ module.exports = {
       '0x6b175474e89094c44da98b954eedeac495271d0f', // dai
       '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', // usdc
       '0x59bD11F8a5a833f26723D044CbB501a40C9C5E43', // fuel-js
+      '0x6880f6fd960d1581c2730a451a22eed1081cfd72', // fuel-js
     ].reduce(addressObjectify, {}),
     kovan: [
       '0x7c5FCcCd3C94Faf14A3a9391a7C52B734Ac9Fbd2', // fuel-js
