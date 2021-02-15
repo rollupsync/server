@@ -51,7 +51,11 @@ module.exports = {
       {
         address: '0x59bD11F8a5a833f26723D044CbB501a40C9C5E43',
         genesisBlock: 11559670,
-      }
+      },
+      {
+        address: '0x6880f6fd960d1581c2730a451a22eed1081cfd72',
+        genesisBlock: 11787727,
+      },
     ],
     kovan: [
       {
