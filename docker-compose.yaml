@@ -13,10 +13,10 @@ services:
       - 8545:8545
       - 8546:8546
     environment:
-      MAINNET_URL: ws://192.168.1.199:8546
+            #MAINNET_URL: ws://192.168.1.199:8546
       KOVAN_URL: ws://192.168.1.199:8850
       GOERLI_URL: ws://192.168.1.199:9546
-      NETWORK_OVERRIDE: mainnet
+      NETWORK_OVERRIDE: goerli
 
 volumes:
   redis_cache:

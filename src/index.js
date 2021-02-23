@@ -84,7 +84,7 @@ const wss = new Websocket.Server({
 })
 
 wss.on('connection', (ws, req) => {
-  const host = req.headers['host'] || req.headers['x-forwarded-for'] || ''
+  const host = process.env.NETWORK_OVERRIDE || req.headers['host'] || req.headers['x-forwarded-for'] || ''
   const network = host.split('.').shift().toLowerCase()
   ws.on('message', async (message) => {
     let data
@@ -105,7 +105,7 @@ wss.on('connection', (ws, req) => {
     }
     try {
       const handler = await handlers[network]
-      const res = await handler(data)
+      const res = await handler(data, ws)
       ws.send(JSON.stringify(res))
       logRequest(data.method)
         .catch((err) => console.log(err, 'Error logging request'))

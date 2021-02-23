@@ -11,15 +11,17 @@ const {
   databaseIndex,
 } = require('./utils')
 const CacheWorker = require('./cache_worker')
+const Subscriptions = require('./subscriptions')
 
 const storageByNetwork = {}
 
-module.exports = async (network) => {
+module.exports = async (network, ws) => {
   const provider = providerUrls[network]
   if (!provider) {
     throw new Error(`No provider found for network: ${network}`)
   }
   const web3 = new Web3(provider)
+  const subscriptions = new Subscriptions(web3)
   const chainId = await web3.eth.getChainId()
   const worker = new CacheWorker(network, provider, chainId)
   storageByNetwork[network] = {
@@ -60,6 +62,10 @@ module.exports = async (network) => {
     }
     if (!methods[method]) {
       throw new Error(`Method ${method} is not allowed`)
+    }
+    if (method === 'eth_subscribe' || method === 'eth_unsubscribe') {
+      // pass to subcribe handler
+      subscriptions.handle(params[0], ws)
     }
     if (!skipCache) {
       try {

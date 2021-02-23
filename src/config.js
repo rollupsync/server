@@ -92,5 +92,7 @@ module.exports = {
     'eth_sendTransaction',
     'eth_getCode',
     'eth_getBalance',
+    'eth_subscribe',
+    'eth_unsubscribe',
   ].reduce(objectify, {}),
 }
